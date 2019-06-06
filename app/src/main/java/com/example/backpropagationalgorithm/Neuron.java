@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class Neuron {
+class Neuron {
 
     private List<Double> mWeights;
     private List<Double> mWeightsGradient;
@@ -12,10 +12,11 @@ public class Neuron {
     private Double mOutput;
     private double mDelta;
 
-    //public Neuron(int totalWeights, List<Double> weights) {
+    // test
+    // public Neuron(int totalWeights, List<Double> weights) {
     //    mWeights = weights;
 
-    public Neuron(int totalWeights) {
+    Neuron(int totalWeights) {
         mWeights = new ArrayList<>();
         Random random = new Random();
 
