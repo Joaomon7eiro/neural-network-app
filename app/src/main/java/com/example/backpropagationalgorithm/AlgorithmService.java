@@ -29,9 +29,10 @@ public class AlgorithmService extends IntentService {
         List<Double> hiddenLayerOutputs;
         double networkError = 1;
         int epochs = 0;
+        List<Double> networkOutputs = new ArrayList<>();
 
         while (networkError > 0.01 && epochs < 10000) {
-            List<Double> networkOutputs = new ArrayList<>();
+            networkOutputs.clear();
             for (int i = 0; i < patterns.size(); i++) {
                 hiddenLayer.feedForward(Arrays.asList(patterns.get(i)));
                 hiddenLayerOutputs = hiddenLayer.getNeuronsOutput();
