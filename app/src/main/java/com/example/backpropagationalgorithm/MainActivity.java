@@ -9,11 +9,18 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements PlotCallback {
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private AlgorithmService mService;
@@ -22,13 +29,20 @@ public class MainActivity extends AppCompatActivity {
     private int[] mExpectedOutputs;
     private Layer mHiddenLayer;
     private Layer mOutputLayer;
+    private Intent mIntent;
+    private TextView mEpochs;
+    private TextView mError;
+    private LinearLayout mContainer;
+    private Button mCalculateButton;
 
     ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
             AlgorithmService.MyBinder myBinder = (AlgorithmService.MyBinder) binder;
             mService = myBinder.getService();
-            mService.train(mPatterns, mExpectedOutputs, mLearningRate, mHiddenLayer, mOutputLayer);
+            mService.setCallback(MainActivity.this);
+            mService.setParams(mPatterns, mExpectedOutputs, mLearningRate, mHiddenLayer, mOutputLayer);
+            startService(mIntent);
         }
 
         @Override
@@ -37,16 +51,20 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button calculateButton = findViewById(R.id.calculate_button);
-        calculateButton.setOnClickListener(new View.OnClickListener() {
+        mContainer = findViewById(R.id.values_container);
+        mEpochs = findViewById(R.id.epochs);
+        mError = findViewById(R.id.error);
+
+        mCalculateButton = findViewById(R.id.calculate_button);
+        mCalculateButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mCalculateButton.setEnabled(false);
                 try {
                     unbindService(mServiceConnection);
                 } catch (Exception e) {
@@ -56,6 +74,12 @@ public class MainActivity extends AppCompatActivity {
                 startAlgorithm();
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(mServiceConnection);
     }
 
     private void startAlgorithm() {
@@ -92,8 +116,37 @@ public class MainActivity extends AppCompatActivity {
         outputLayerNeurons.add(neuronO2);
         mOutputLayer = new Layer(outputLayerNeurons);
 
-        Intent intent = new Intent(this, AlgorithmService.class);
-        startService(intent);
-        bindService(intent, mServiceConnection, BIND_AUTO_CREATE);
+        mIntent = new Intent(this, AlgorithmService.class);
+        bindService(mIntent, mServiceConnection, BIND_AUTO_CREATE);
+    }
+
+    @Override
+    public void draw(List<Entry> data) {
+        LineChart chart = findViewById(R.id.chart);
+        LineDataSet dataSet = new LineDataSet(data, "Label");
+        dataSet.setValueTextColor(getResources().getColor(R.color.colorPrimary));
+        dataSet.setColor(getResources().getColor(R.color.colorPrimary));
+        dataSet.setCircleColor(getResources().getColor(R.color.colorPrimary));
+        LineData lineData = new LineData(dataSet);
+        chart.setData(lineData);
+        chart.invalidate();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mCalculateButton.setEnabled(true);
+            }
+        });
+    }
+
+    @Override
+    public void update(final int epoch, final double error) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mContainer.setVisibility(View.VISIBLE);
+                mEpochs.setText(getString(R.string.epoch, String.valueOf(epoch)));
+                mError.setText(getString(R.string.error, String.valueOf(error * 100)));
+            }
+        });
     }
 }

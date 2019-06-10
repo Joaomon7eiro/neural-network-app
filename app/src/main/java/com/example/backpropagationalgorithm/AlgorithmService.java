@@ -6,14 +6,21 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.github.mikephil.charting.data.Entry;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class AlgorithmService extends IntentService {
     private static final String TAG = AlgorithmService.class.getSimpleName();
-
     MyBinder mBinder = new MyBinder();
+    private List<Double[]> mPatterns;
+    private int[] mExpectedOutputs;
+    private float mLearningRate;
+    private Layer mHiddenLayer;
+    private Layer mOutputLayer;
+    private PlotCallback mCallback;
 
     public AlgorithmService() {
         super(TAG);
@@ -21,43 +28,53 @@ public class AlgorithmService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-    }
-
-    public void train(List<Double[]> patterns, int[] expectedOutputs, float learningRate,
-                       Layer hiddenLayer, Layer outputLayer) {
-
         List<Double> hiddenLayerOutputs;
         double networkError = 1;
         int epochs = 0;
         List<Double> networkOutputs = new ArrayList<>();
 
+        List<Entry> data = new ArrayList<>();
+
         while (networkError > 0.01 && epochs < 10000) {
             networkOutputs.clear();
-            for (int i = 0; i < patterns.size(); i++) {
-                hiddenLayer.feedForward(Arrays.asList(patterns.get(i)));
-                hiddenLayerOutputs = hiddenLayer.getNeuronsOutput();
+            for (int i = 0; i < mPatterns.size(); i++) {
+                mHiddenLayer.feedForward(Arrays.asList(mPatterns.get(i)));
+                hiddenLayerOutputs = mHiddenLayer.getNeuronsOutput();
 
-                double networkOutput = outputLayer.feedForward(hiddenLayerOutputs);
+                double networkOutput = mOutputLayer.feedForward(hiddenLayerOutputs);
                 Log.i(TAG, "network output " + networkOutput);
                 networkOutputs.add(networkOutput);
 
-                double error = expectedOutputs[i] - networkOutput;
+                double error = mExpectedOutputs[i] - networkOutput;
 
-                outputLayer.calculateNeuronsDelta(error, null);
-                hiddenLayer.calculateNeuronsDelta(error, outputLayer.getNeurons());
+                mOutputLayer.calculateNeuronsDelta(error, null);
+                mHiddenLayer.calculateNeuronsDelta(error, mOutputLayer.getNeurons());
 
-                outputLayer.calculateNeuronsWeightGradient();
-                hiddenLayer.calculateNeuronsWeightGradient();
+                mOutputLayer.calculateNeuronsWeightGradient();
+                mHiddenLayer.calculateNeuronsWeightGradient();
 
-                outputLayer.recalculateWeights(learningRate);
-                hiddenLayer.recalculateWeights(learningRate);
+                mOutputLayer.recalculateWeights(mLearningRate);
+                mHiddenLayer.recalculateWeights(mLearningRate);
             }
-            networkError = meanSquaredError(networkOutputs, patterns.size(), expectedOutputs);
+            networkError = meanSquaredError(networkOutputs, mPatterns.size(), mExpectedOutputs);
             Log.i(TAG, "network error " + networkError);
+            data.add(new Entry(epochs, (float) networkError));
+
+            mCallback.update(epochs, networkError);
             epochs++;
         }
+        mCallback.draw(data);
         Log.i(TAG, "epochs " + epochs);
         stopSelf();
+    }
+
+    public void setParams(List<Double[]> patterns, int[] expectedOutputs, float learningRate,
+                          Layer hiddenLayer, Layer outputLayer) {
+        mPatterns = patterns;
+        mExpectedOutputs = expectedOutputs;
+        mLearningRate = learningRate;
+        mHiddenLayer = hiddenLayer;
+        mOutputLayer = outputLayer;
     }
 
     private Double meanSquaredError(List<Double> networkOutputs, int size, int[] expectedOutputs) {
@@ -67,6 +84,10 @@ public class AlgorithmService extends IntentService {
             squaredErrors += Math.pow(currentResult, 2);
         }
         return (1f / size) * squaredErrors;
+    }
+
+    public void setCallback(PlotCallback callback) {
+        mCallback = callback;
     }
 
     class MyBinder extends Binder {

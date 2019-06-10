@@ -8,6 +8,7 @@ class Neuron {
 
     private List<Double> mWeights;
     private List<Double> mWeightsGradient;
+    private List<Double> mWeightsNewValues;
     private List<Double> mInputs;
     private Double mOutput;
     private double mDelta;
@@ -72,5 +73,13 @@ class Neuron {
 
     void setWeights(List<Double> newWeights) {
         mWeights = newWeights;
+    }
+
+    List<Double> getWeightsNewValues() {
+        return mWeightsNewValues;
+    }
+
+    void setWeightsNewValues(List<Double> weightsNewValues) {
+        mWeightsNewValues = weightsNewValues;
     }
 }

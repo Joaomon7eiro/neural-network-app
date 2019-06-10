@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">BackPropagation Algorithm</string>
+    <string name="epoch">Épocas: %1$s</string>
+    <string name="error">Porcentagem de Erro: %1$s %%</string>
 </resources>

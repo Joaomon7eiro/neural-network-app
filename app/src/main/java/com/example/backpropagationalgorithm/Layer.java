@@ -73,16 +73,29 @@ class Layer {
     }
 
     void recalculateWeights(float learningRate) {
+        float momentum = 0.2f;
         for (int i = 0; i < mNeurons.size(); i++) {
             Neuron neuron = mNeurons.get(i);
+
             List<Double> newWeights = new ArrayList<>();
+            List<Double> newWeightsValues = new ArrayList<>();
+
             List<Double> oldWeights = neuron.getWeights();
             List<Double> oldWeightsGradient = neuron.getWeightsGradient();
+            List<Double> oldWeightsNewValues = neuron.getWeightsNewValues();
 
             for (int j = 0; j < oldWeights.size(); j++) {
-                newWeights.add(oldWeights.get(j) + (learningRate * oldWeightsGradient.get(j)));
+                double newWeight;
+                if (oldWeightsNewValues != null) {
+                    newWeight = learningRate * oldWeightsGradient.get(j) + momentum * oldWeightsNewValues.get(j);
+                } else {
+                    newWeight = learningRate * oldWeightsGradient.get(j);
+                }
+                newWeightsValues.add(newWeight);
+                newWeights.add(oldWeights.get(j) + newWeight);
             }
             neuron.setWeights(newWeights);
+            neuron.setWeightsNewValues(newWeightsValues);
         }
     }
 }
